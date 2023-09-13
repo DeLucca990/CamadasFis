@@ -1,0 +1,20 @@
+*Buffer - É uma área temporária de armazenamento de dados em um programa de computador ou em um sistema de hardware. No nosso caso, são usados
+para armazenar temporariamente os dados que estão sendo transmitidos ou recebidos entre o enlance e o meio de comunicação físico.
+
+*getBufferLen(): Retorna um tamanho em bytes do buffer atual. É útil para verificar quantos bytes de dados estão atualmente 
+armazenados no buffer da camada de recepção (RX) ou transmissão (TX).
+
+*getAllBuffer():  Retorna e limpa todo o conteúdo do buffer da camada de recepção. Ao chamar essa função, 
+é obtido uma cópia de todo o conteúdo do buffer da camada de recepção e, em seguida, o buffer é limpo. Isso é útil quando deseja 
+processar todos os dados recebidos de uma só vez.
+
+*getBuffer(): Retorna um número específico de bytes do início do buffer da camada de recepção e, em seguida, remove esses bytes do buffer.
+Usado para obter uma quantidade específica de bytes do início do buffer da camada de recepção. Após a leitura, 
+esses bytes são removidos do buffer.
+
+*getNData(): Bloqueia até que pelo menos um certo número de bytes esteja disponível no buffer da camada de recepção e, em seguida, 
+retorna esses bytes. É útil quando você deseja aguardar até que uma quantidade específica de dados esteja disponível para leitura. 
+Ela aguarda até que o buffer da camada de recepção contenha pelo menos o número desejado de bytes.
+
+*sendBuffer(): Inicia a transmissão dos dados presentes no buffer da camada de transmissão (TX). Usado para iniciar a transmissão dos dados 
+que estão armazenados no buffer da camada de transmissão. Isso permite enviar os dados através do meio de comunicação físico.
