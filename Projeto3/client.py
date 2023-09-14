@@ -38,7 +38,7 @@ def start():
 
 def loadFile():
     global arquivo
-    filename = './message.txt'
+    filename = 'Projeto3\message.txt'
     try:
         with open(filename, "r") as file:
             arquivo = file.read()
