@@ -11,11 +11,11 @@
 
 
 from enlace import *
-from enlaceRx import * 
+from datagrama import *
+from stringToDatagram import *
 import time
 import numpy as np
-import sys
-
+import os
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
@@ -27,150 +27,138 @@ import sys
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
 serialName = "COM3"                  # Windows(variacao de)
 
+previousPackageIndex = -1 # Index do pacote anterior
+
+if os.path.exists("recebido.txt"):
+    os.remove("recebido.txt")
+
+com1 = enlace(serialName)
+com1.enable()
+payload = ''
+
+def handshake():
+    handshake_head = Head('HH', 'SS', 'CC') # 'HH' (handshake) com remetente 'SS' (servidor) e destinatário 'CC' (cliente)
+    handshake_head.buildHead()
+    handshake = Datagrama(handshake_head, '') # Cria o Datagrama com o Head e sem Payload
+    com1.sendData(bytes(handshake.head.finalString + handshake.EOP, "utf-8"))
+    print('Handshake recebido, enviando confirmação')
+
+def acknowledge(): # Envia confirmação de recebimento
+    confirmationHead = Head('88', 'SS', 'CC') # '88' (confirmação) com remetente 'SS' (servidor) e destinatário 'CC' (cliente)
+    confirmationHead.buildHead()
+    confirmation = Datagrama(confirmationHead, '') # Cria o Datagrama com o Head e sem Payload
+    confirmationString = confirmation.head.finalString + confirmation.EOP # Constrói uma string de confirmação concatenando o cabeçalho e o EOP
+    while len(confirmationString) < 22: #27
+        confirmationHead = Head('88', 'SS', 'CC')
+        confirmationHead.buildHead()
+        confirmation = Datagrama(confirmationHead, '')
+        confirmationString = confirmation.head.finalString + confirmation.EOP
+    print(confirmationString)
+    com1.sendData(bytes(confirmationString, "utf-8"))
+
+def not_acknowledge(): # Envia pedido de reenvio
+    confirmationHead = Head('99', 'SS', 'CC')
+    confirmationHead.buildHead()
+    confirmation = Datagrama(confirmationHead, '')
+    confirmationString = confirmation.head.finalString + confirmation.EOP
+    while len(confirmationString) < 22: #27
+        confirmationHead = Head('99', 'SS', 'CC')
+        confirmationHead.buildHead()
+        confirmation = Datagrama(confirmationHead, '')
+        confirmationString = confirmation.head.finalString + confirmation.EOP
+    #print(confirmationString)
+    com1.sendData(bytes(confirmationString, "utf-8"))
+
+
 def main():
+    # Declaram-se as variáveis globais para que elas possam ser modificadas dentro da função.
+    global payload
+    global previousPackageIndex
     try:
-        print("Iniciou o main")
-        com1 = enlace(serialName)
-        com1.enable()
+        #Byte de sacrifício
+        print("Esperando 1 byte de sacrifício")
+        rxBuffer, nRx = com1.getData(1)
+        com1.rx.clearBuffer()
+        time.sleep(.1)
 
-        com1.fisica.flush()
+        print("Comunicação aberta com sucesso")
 
-        # Iniciando Cronômetro
-        cronometro_server = time.time()
+        # Handshake
+        print("Esperando handshake...")
+        rxLen = com1.rx.getBufferLen() # Obtém o comprimento do buffer de recepção.
+        while rxLen == 0: # Inicia um loop que aguarda até que haja algo no buffer de recepção.
+            rxLen = com1.rx.getBufferLen()
+            time.sleep(.5)
+        rxBuffer, nRx = com1.getData(rxLen) # Quando há dados no buffer de recepção, obtém esses dados
 
-        print("Abriu a comunicação")
+        decoded = rxBuffer.decode() # Decodifica os dados recebidos em UTF-8.
+        datagram = stringToDatagram(decoded) # Converte a string recebida em um objeto Datagrama. 
 
-        # HANDSHAKE
-        TryAgain = True
-        while TryAgain:
-            print("-------------------------")
-            print("         HANDSHAKE        ")
-            print("-------------------------\n")
-            print("Vamos estabelecer o Handshake com o Client")
+        if decoded.startswith('HH'): # Verifica se o pacote recebido é um handshake
+            handshake()
+        else:
+            raise Exception("Erro: pacote recebido não é handshake") # Se não for handshake levanta um erro
+        
+        com1.rx.clearBuffer() # Limpa buffer após o processo de handshake
 
-            # os mesmos 2 bytes que foram enviados vão ser recebidos aqui: que são exatamente o tamanho total de byte
-            if txBufferHandshake[12:13] == b'\x01':
-                txBufferHandshake, tRxHandshake = com1.getData(16)
-            
-            
-            EOP = b'\x00\x00\x01'
-            respostaServer = b'HEAD\x01/\x01\x00\x00\x00' + b'\x02' + EOP
+        # Recebendo pacotes
 
-            # de bytes transformando para decimal de novo, que é como iremos usar no resto da comunicação
+        print("Iniciando recebimento de pacotes")
+        print("-----------------------------------------")
 
-            print("Agora servidor está enviando o Handshake de volta para o client")
-
-            if txBufferHandshake[10:11] == b'\x01':
-                com1.sendData(respostaServer)
+        while True:
+            rxLen = com1.rx.getBufferLen()
+            while rxLen == 0:
+                rxLen = com1.rx.getBufferLen()
                 time.sleep(1)
-                print("Respondi o Handshake e posso começar a transmissão")
-                TryAgain = False
+            rxBuffer, nRx = com1.getData(rxLen)
+            time.sleep(0.3)
 
+            decoded = rxBuffer.decode() # Decodifica os dados recebidos em UTF-8.
+            datagram = stringToDatagram(decoded) # Converte a string recebida em um objeto Datagrama.
 
-        print("Pronto para receber os pacotes\n")
+            print(int(datagram.head.payloadSize))
+            print(len(datagram.payload))
 
-        # RECEBER DATAGRAMAS
-
-        EnvioNaoCompleto = True
-
-        nOldPackage = 0
-        dataReceived = []
-
-        print("------------------------------------------------")
-        print("         INICIANDO RECEBIMENTO DE PACOTES      ")
-        print("------------------------------------------------\n")
-
-        forcarErro = False
-        forcarErroNbytes = True
-
-        while EnvioNaoCompleto:
-            print("Vamos estabelecer o recebimento dos datagramas com o Client!")
-            # os mesmos 2 bytes que foram enviados vão ser recebidos aqui: que são exatamente o tamanho total de byte
-            txPackSize, tRxNPackSize= com1.getData(2)
-
-            rxBufferResposta = int.from_bytes(txPackSize, byteorder ="big")
-
-            print("Agora o servidor está enviando o número de bytes do pacote a ser recebido")
-
-            if rxBufferResposta[9:10] == b'\x07':
-                com1.sendData(np.asarray(txPackSize))
-
-            print("Manda de novo o número de bytes que vai receber\n")
-
-            txPack, txnPack = com1.getData(rxBufferResposta)
-
-            print("-----------------------------------")
-            print("        ANALISANDO PACOTES...    ")
-            print("-----------------------------------\n")
-            print(f"Pacote recebido:{txnPack}\n")
-
-            if forcarErroNbytes:
-                BytesErrados = txPack[0:10] + b'\x00\x01\x02\x00\x00\x00\x02' + txPack[11:rxBufferResposta]
-                txPack = BytesErrados
-                print(f"BYTES ERRADOS:{BytesErrados}")
-            
-            EOP = txPack[(rxBufferResposta-3):rxBufferResposta]
-            print(f"Esse é o EOP:{EOP}\n")
-            CurrentPack = txPack[4:5]
-
-            print("-------------------------\n")
-            print(f"Pacote atual:{CurrentPack}")
-            nCurrentPack = int.from_bytes(CurrentPack, byteorder="big")
-            print(f"Pacote atual em int:{nCurrentPack}\n")
-            TotalPacks = txPack[6:7]
-            nTotalPacks = int.from_bytes(TotalPacks, byteorder="big")
-            print("-------------------------\n")
-
-            print(f'Número total de pacotes: {nTotalPacks}')
-
-            sinal_verde = b'HEAD\x01/\x01\x00\x00\x00' + b'\x0F'+ EOP
-
-            if forcarErro:
-                nCurrentPack -= 1
-
-            if nCurrentPack == (nOldPackage + 1) and EOP == b'\x00\x00\x01':
-                print(f"Pacote recebido está certo! Vou enviar o sinal verde: {sinal_verde}")
-                dataReceived.append(txPack)
-                com1.sendData(sinal_verde)
-                nOldPackage+= 1
-                if nCurrentPack == nTotalPacks and EOP == b'\x00\x00\x01':
-                    print("Recebi todos os pacotes!")
-                    EnvioNaoCompleto = False
+            if decoded.startswith('DD'): # Verifica se o pacote recebido é um pacote de dados
+                if decoded.endswith('ABC'): # Verifica se o pacote recebido tem o EOP no local correto
+                    if int(datagram.head.payloadSize) == len(datagram.payload): # Compara o tamanho do payload no cabeçalho com o tamanho real do payload. Isso é usado para verificar a integridade do pacote.
+                        if int(datagram.head.currentPayloadIndex) == previousPackageIndex + 1: # Verifica se o índice do pacote recebido é o esperado (ou seja, se é o próximo pacote na sequência).
+                            print(f"Pacote {previousPackageIndex+1} recebido com sucesso")
+                            payload += datagram.payload
+                            acknowledge()
+                            previousPackageIndex += 1
+                            print(previousPackageIndex)
+                            # Se todas as condições acima forem atendidas, o pacote é considerado recebido com sucesso. Os dados do pacote são adicionados ao payload, uma confirmação é enviada ao servidor, e o índice do pacote anterior é atualizado.
+                        else:
+                            print("Index do pacote errado, pedindo reenvio do pacote")
+                            not_acknowledge() # Solicita o reenvio do pacote
+                        
+                        print(f"Indice do payload atual:{int(datagram.head.currentPayloadIndex) + 1}")
+                        print(f"Indice total do payload: {int(datagram.head.totalPayloads)}")
+                        if int(datagram.head.currentPayloadIndex) + 1 == int(datagram.head.totalPayloads): # Verifica se todos os pacotes foram recebidos com sucesso com base nos índices de payload. Se todos os pacotes foram recebidos, o loop é interrompido.
+                            print("Todos pacotes recebidos com sucesso")
+                            break
+                    else:
+                        print("Tamanho do payload errado, pedindo reenvio do pacote")
+                        not_acknowledge()
+                else:
+                    print("EoP no local errado, pedindo reenvio do pacote")
+                    not_acknowledge()
+                        
+                print("--------------------------------------------------")    
+                com1.rx.clearBuffer()	
             else:
-                if forcarErro:
-                    print("Recebi o pacote errado!")
-                    print("O Client vai ter que me enviar o mesmo pacote")
-                    forcarErro = False
-                    CurrentPackDatagrama = b'HEAD\x01/\x01\x00\x00\x00' + CurrentPack + EOP
-                    print(CurrentPackDatagrama)
-                    com1.sendData(CurrentPackDatagrama)
-                elif forcarErroNbytes:
-                    print("Recebi o número de bytes errado! O EOP está fora de ordem")
-                    print("O client vai ter que me reenviar o pacote")
-                    forcarErroNbytes = False
-                    CurrentPackDatagrama = b'HEAD\x01/\x01\x00\x00\x00' + CurrentPack + b'\x00\x00\x01'
-                    print(CurrentPackDatagrama)
-                    com1.sendData(CurrentPackDatagrama)
-            # o server deve enviar uma mensagem para o client solicitando o reenvio do pacote, seja por
-            # não ter o payload esperado, ou por não ser o pacote correto
-        print(f"Todos os dados aqui: {dataReceived}")
+                print("Tipo do pacote errado, pedindo reenvio do pacote")
+                not_acknowledge()
 
-        organizedData = b''
+        # Salvando arquivo
+        decodedPayload = payload
+        print("Salvando arquivo")
+        with open("recebido.txt", "w") as arquivo:
+            arquivo.write(decodedPayload)
 
-        for j in range(len(dataReceived)):
-            currentByteStr = dataReceived[j]
-            lenCurrentByteStr = len(currentByteStr)
-            payload = currentByteStr[10:(lenCurrentByteStr-3)]
-            organizedData += payload
-
-        print(organizedData)
-
-        # with open('receivedFile.txt','wb') as f:
-        #     f.write(organizedData)
-
-        tempo_final = time.time()
-        tempo_total = tempo_final - cronometro_server
-
+        acknowledge()
 
         # Encerra comunicação
         print("-------------------------")
