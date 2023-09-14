@@ -14,6 +14,8 @@ from enlace import *
 from enlaceRx import * 
 import time
 import numpy as np
+import sys
+
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
@@ -47,8 +49,10 @@ def main():
             print("Vamos estabelecer o Handshake com o Client")
 
             # os mesmos 2 bytes que foram enviados vão ser recebidos aqui: que são exatamente o tamanho total de byte
-
-            txBufferHandshake, tRxHandshake = com1.getData(14)
+            if txBufferHandshake[12:13] == b'\x01':
+                txBufferHandshake, tRxHandshake = com1.getData(16)
+            
+            
             EOP = b'\x00\x00\x01'
             respostaServer = b'HEAD\x01/\x01\x00\x00\x00' + b'\x02' + EOP
 
@@ -57,11 +61,12 @@ def main():
             print("Agora servidor está enviando o Handshake de volta para o client")
 
             if txBufferHandshake[10:11] == b'\x01':
-                time.sleep(1)
                 com1.sendData(respostaServer)
+                time.sleep(1)
                 print("Respondi o Handshake e posso começar a transmissão")
                 TryAgain = False
-        
+
+
         print("Pronto para receber os pacotes\n")
 
         # RECEBER DATAGRAMAS
@@ -87,7 +92,8 @@ def main():
 
             print("Agora o servidor está enviando o número de bytes do pacote a ser recebido")
 
-            com1.sendData(np.asarray(txPackSize))
+            if rxBufferResposta[9:10] == b'\x07':
+                com1.sendData(np.asarray(txPackSize))
 
             print("Manda de novo o número de bytes que vai receber\n")
 

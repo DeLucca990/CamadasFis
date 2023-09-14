@@ -25,22 +25,54 @@ import numpy as np
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
 serialName = "COM3"                  # Windows(variacao de)
 
+
+def verifica_time(tempo_inicial):
+    tempo_atual = time.time()
+    while(RX.getBufferLen() < TX.size): #ver aqui direito a variavel
+        tempo_passado = tempo_atual - tempo_inicial
+
+        if tempo_passado > 5:
+            return True
+        else:
+            return False
+    
 def main():
     try:
         print("Iniciou o main")
         com1 = enlace(serialName)
         com1.enable()
 
+        com1.fisica.flush()
+
         # Iniciando o cronometro
         cronometro_client = time.time()
 
         print("Abriu a comunicação")
 
+        def verifica_time():
+            inicial_time = time.time()
+            while(self.getBufferLen() < size):
+                clock = time.time() - inicial_time
+                time.sleep(0.05)
+                if clock >= 5:
+                    print("Servidor inativo")
+                    return (b'\xFF')     
+
         EOP = b'\x00\x00\x01'
-        handshake_message = b'HEAD\x01/\x01\x00\x00\x00' + b'\x01' + EOP
+        handshake_message = b'HEAD\x01\x01\x00\x00\x00\x00\x00\x00' + b'\x01' + EOP
         print(f"Enviando o seguinte HandShake {handshake_message} de tamanho {len(handshake_message)}")
         
-        
+        # 0-tipo [0:Handshake,1:Resposta Handshake,2:Envio de comandos,3:Acknowledge],
+        # 1-origem [0:Client, 1:Server],
+        # 2-destino [0:Server, 1:Client],
+        # 3-tamanho total do arquivo [quantidade de bytes que serão fracionados em n pacotes],
+        # 4-tamanho total do arquivo [quantidade de bytes que serão fracionados em n pacotes],
+        # 5-pacotes a serem enviados [número n],
+        # 6-numero do pacote atual [entre 0 e n-1, dado n pacotes],
+        # 7-quantidade de bytes no payload atual [entre 0 e 114],
+        # 8-integridade do pacote [1:OK,0:solicita reenvio]
+        # 9-porcentagem de bytes que faltam para a imagem (complementar do tamanho total)
+
         # HANDSHAKE
         TryAgain = True
         while TryAgain:
@@ -49,32 +81,44 @@ def main():
             print("-------------------------\n")
             print("Handshake pelo client sendo enviado em alguns segundos... \n")
 
-            com1.sendData(handshake_message)
+            com1.sendData(np.asarray(handshake_message))
             time.sleep(0.1)
 
             print("Handshake enviado, esperando resposta do server... \n")
             print(f'Númeo de bytes enviados: {com1.tx.transLen}')
 
-            rxBufferHandshake, rxnHandshake = com1.getData(14)
+            rxBufferHandshake, rxnHandshake = com1.getData(16)
+            time.sleep(1)
 
             #print(f'Recebeu o handshake do server de tamanho {rxnHandshake}')
 
-            if rxBufferHandshake[10:11] == b'\x02':
-                print("Handshake feito com sucesso!")
-                print(f"O server recebeu o byte: {rxBufferHandshake}")
-                print("Vamos iniciar a transmissao do pacote\n")
-                TryAgain = False
-            # Quando o server não responde essa resposta é autogerada
-            elif rxBufferHandshake == b'\xFF':
-                resposta = input("Tentar novamente (S/N)?")
-                if resposta.lower() == "s":
-                    TryAgain = True
-                else: 
+            if rxBufferHandshake[12:13] == b'\x02':
+                if not verifica_time():
+                    print("Handshake feito com sucesso!")
+                    print(f"O server recebeu o byte: {rxBufferHandshake}")
+                    print("Vamos iniciar a transmissao do pacote\n")
                     TryAgain = False
-                    print("Ocorreu um erro. Tente novamente depois")
+                else:
+                    resposta = input("Tentar novamente (S/N)?")
+                    if resposta.lower() == "s":
+                        rxBufferHandshake[12:12] == b'\x01'
+                        TryAgain = True
+                    else: 
+                        TryAgain = False
+                        print("Ocorreu um erro. Tente novamente depois")
+            
+                    
+            # Quando o server não responde essa resposta é autogerada
+            # elif rxBufferHandshake == b'\xFF':
+            #     resposta = input("Tentar novamente (S/N)?")
+            #     if resposta.lower() == "s":
+            #         TryAgain = True
+            #     else: 
+            #         TryAgain = False
+            #         print("Ocorreu um erro. Tente novamente depois")
         
         # Definindo o PAYLOAD
-        filepath = "./payload.txt"
+        filepath = "Projeto3\payload.txt"
         payloadSize = 50
 
         packageList = []
@@ -90,7 +134,7 @@ def main():
         for i in range(len(packageList)):
             lenPacks_bin = len(packageList).to_bytes(1, byteorder="big") # Converte o tamanho do pacote para bytes
             currentPacks = (i+1).to_bytes(1, byteorder="big") # Converte o número do pacote para bytes
-            Head = b'HEAD' + currentPacks + b'/' + lenPacks_bin + b'\x00\x00\x00'
+            Head = b'HEAD' + currentPacks + b'/' + lenPacks_bin + b'\x00\x00\x01'
             string_bytes_pack = Head + packageList[i] + EOP # Concatena todos os bytes do pacote
             datagramas.append(string_bytes_pack)
 
@@ -125,8 +169,8 @@ def main():
                 com1.sendData(np.asarray(pacoteEnviar))
 
                 if n != len(datagramas):
-                    rxNextPack, rxnNextPack = com1.getData(14)
-                    if rxNextPack[10:11] == b'\x0F':
+                    rxNextPack, rxnNextPack = com1.getData(16)
+                    if rxNextPack[12:13] == b'\x0F':
                         print("O server deu o sinal verde, posso enviar o próximo pacote\n")
                         n += 1
                     else:
