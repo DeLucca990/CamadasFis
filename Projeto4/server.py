@@ -24,8 +24,7 @@ from datetime import datetime
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM3"                  # Windows(variacao de)
-com1 = enlace(serialName)
+#serialName = "COM3"                  # Windows(variacao de)
 
 class Server:
     def __init__(self, serialName):
@@ -75,7 +74,45 @@ class Server:
         h8 = head[8] # CRC Próximo projeto
         h9 = head[9] # CRC Próximo projeto
         return h0, h1, h2, h3, h4, h5, h6, h7, h8, h9
+    
+    def checkMsgIntegrity(self, pacote, numPacote):
+        self.createLog(pacote, 'recebimento')
+        h0, h1, h2, h3, h4, h5, h6, h7, h8, h9 = self.splitHead(pacote)
+        # Checando se o número do pacote enviado está correto
+        if h4 != numPacote:
+            print(f"O número do pacote está errado! Por favor reenvie o pacote {numPacote}")
+            h0 = 6 # 6 indica erro
+            h7 = numPacote
+            confirmacao = [h0, h1, h2, h3, h4, h5, h6, h7, h8, h9]
+            responseCorrectMsg = b'' # Cria a mensagem de confirmação em bytes para enviar ao client
+            for i in confirmacao: # Transforma cada elemento da lista em bytes
+                i = (i).to_bytes(1, byteorder="big")
+                responseCorrectMsg += i
+            self.serverCom.sendData(responseCorrectMsg + b'\x00' + b'\xAA \xBB \xCC \xDD')
+            #self.createLog(responseCorrectMsg + b'\x00' + b'\xAA \xBB \xCC \xDD', 'envio')
+            time.sleep(0.5)
+            return h4, h3
 
+        # Checando se o EOP está no local correto
+        eop = pacote[len(pacote)-4:len(pacote)+1]
+        if eop != b'\xAA \xBB \xCC \xDD':
+            print(f"O eop está no local errado! Por favor reenvie o pacote {numPacote}")
+            return h4, h3
+        
+        # Se tudo estiver certo, deu bom
+        else:
+            print("Está tudo certo com a mensagem! Vamos enviar a confirmação.")
+            h0 = 4 # 4 indica sucesso
+            h7 = numPacote
+            confirmacao = [h0, h1, h2, h3, h4, h5, h6, h7, h8, h9]
+            responseCorrectMsg = b''
+            for i in confirmacao:
+                i = (i).to_bytes(1, byteorder="big")
+                responseCorrectMsg += i
+            self.serverCom.sendData(responseCorrectMsg + b'\x00' + b'\xAA \xBB \xCC \xDD')
+            self.createLog(responseCorrectMsg + b'\x00' + b'\xAA \xBB \xCC \xDD', 'envio')
+            time.sleep(0.5)
+            return h4, h3
 
     # Escreve os logs
     def createLog(self, data, tipo):
@@ -89,19 +126,53 @@ class Server:
     def writeLog(self):
         with open(f'Projeto4/Logs/logServer.txt', 'w') as file:
             file.write(self.logs)
+    
+serialName = "COM3"
 
 def main():
     try:
+        server = Server('COM3')
+        server.startServer()
+
+        # HandShake
+        print("Esperando o Handshake do Client...\n")
+        pack, lenpack = server.receiveHandshake(15)
+        print("Handshake recebido com sucesso, enviando resposta")
+        server.sendData(pack)
+        time.sleep(0.5)
+
+        # Recebendo o pacote
+        data = b'' # Dados que serão armanezados nessa variável
+        numPack = 1 # Número do pacote que está sendo recebido
         
-        print("-------------------------")
-        print("Comunicação encerrada")
-        print("-------------------------")
-        com1.disable()
+        while True:
+            print(f"Recebendo informações do pacote {numPack}")
+            head, lenhead = server.receiveData(10)
+            len_payload = head[5] # Definimos essa variável (h3) para saber o tamanho do payload
+            payloadEOP, lenpayloadEOP = server.receiveData(len_payload + 4)
+            numPackReceived, numPackTotal = server.checkMsgIntegrity(head + payloadEOP, numPack)
+            if numPackReceived == numPack:
+                data += payloadEOP[0:lenpayloadEOP - 4]
+                numPack += 1 # Caso o pacote esteja correto, passamos para o próximo
+            if numPackReceived == numPackTotal + 1: # Se todos os pacotes foram recebidos, saímos do loop
+                data += payloadEOP[0:lenpayloadEOP - 4]
+                break
+        
+        # Escrevendo o arquivo
+        print("Escrevendo o arquivo")
+        path = "Projeto4/Images/imgRx.png"
+        with open(path, 'wb') as file:
+            file.write(data)
+        file.close()
+        print("Arquivo escrito com sucesso!")
+
+        server.writeLog()
+        server.closeServer()
 
     except Exception as erro:
         print("ops! :-\\")
         print(erro)
-        com1.disable()
+        server.closeServer()
         
 
     #so roda o main quando for executado do terminal ... se for chamado dentro de outro modulo nao roda

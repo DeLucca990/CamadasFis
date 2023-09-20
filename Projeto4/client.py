@@ -25,8 +25,7 @@ from datetime import datetime
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM3"                  # Windows(variacao de)
-com1 = enlace(serialName)
+com1 = enlace('COM3')
 
 class Client:
     def __init__(self, file, serialName):
@@ -36,7 +35,7 @@ class Client:
         self.eop = b'\xAA \xBB \xCC \xDD'
         self.payloads = 0
         self.h0 = 0 # Tipo da Mensagem
-        self.h1 = 0 # Se tipo for 1: número do servidor. Qualquer outro tipo: livre 
+        self.h1 = b'\x00' # Se tipo for 1: número do servidor. Qualquer outro tipo: livre 
         self.h2 = b'\x00' # Livre
         self.h3 = 0 # Numero total de pacotes
         self.h4 = 0 # Numero do pacote enviado
@@ -72,7 +71,7 @@ class Client:
         # Mensagem do tipo Handshake
         if n == 1:
             self.h5 = b'\x00'
-            self.h3 = self.numPack()
+            #self.h3 = self.numPack()
         # Mensagem do tipo dados
         elif n == 3:
             self.h5 = len(self.payloads[int.from_bytes(self.h4,"big")-1]) # -1 pois o index começa em 0
@@ -81,7 +80,7 @@ class Client:
     # Define a mensagem
     def numMsg(self, n):
         self.h4 = (n).to_bytes(1, byteorder="big")  # numero pacote
-        self.h7 = (n-1).to_bytes(1, byteorder="big")    # numero ultimp pacote
+        self.h7 = (n-1).to_bytes(1, byteorder="big")    # numero ultimo pacote
     
     # Define o número total de pacotes
     def numPack(self):
@@ -106,11 +105,11 @@ class Client:
             time.sleep(.5)
             confirmacao, lenConfimacao = self.clientCom.getData(15)
             timeF = time.time()
-            if timeF - timeMax >= 25:
+            if timeF - timeMax > 20:
                 print("Servidor não respondeu. Cancelando comunicação.")
                 break
-            elif type(confirmacao) == str:
-                print(confirmacao)
+            #elif type(confirmacao) == str:
+            #    print(confirmacao)
             else:
                 return confirmacao
 
@@ -118,7 +117,7 @@ class Client:
     def handshake(self):
         payload = b'\x00'
         self.TypeMsg(1)
-        #self.h3 = b'\x00'
+        self.h3 = b'\x00'
         self.h4 = b'\x00'
         self.h7 = b'\x00'
         self.buildHead()
@@ -127,9 +126,9 @@ class Client:
     
     # Checa o tipo de mensagem na confirmação enviada pelo servidor
     def checkTypeMsg(self, confirmacao):
-        if confirmacao[0] == 4:
+        if confirmacao[0] == 4: # 4 indica sucesso (confirmacao[0] = h0)
             self.createLog(confirmacao, 'recebimento')
-            print(confirmacao[7])
+            print(f"Número do pacote: {confirmacao[7]}")
             print("Tudo certo! O servidor recebeu o pacote corretamente.")
         else:
             self.createLog(confirmacao, 'recebimento')
@@ -150,16 +149,17 @@ class Client:
         with open(f'Projeto4/Logs/logClient.txt', 'w') as file:
             file.write(self.logs)
 
-path = 'Projeto4/Imagens/imageTX.png'
+serialName = "COM3"
+path = 'Projeto4/Images/imgTx.jpg'
 file = open(path, "rb").read()
 
 def main():
     try:
-        client = Client(file, serialName)
+        client = Client(file, "COM3")
         client.startClient()
 
         # Handshake
-        print("Iniciando handshake")
+        print("Enviando Handshake\n")
         if client.handshake() is None:
             client.closeClient()
         else:
@@ -167,7 +167,7 @@ def main():
         
         # Envia os pacotes
         print("Iniciando envio de pacotes")
-        payloads = client.createPayloads()
+        client.createPayloads()
         client.numPack()
         # h3 = número total de pacotes
         # h4 = número do pacote sendo enviado
@@ -182,19 +182,19 @@ def main():
             pacote = client.buildDatagram()
             confirmacao = client.SendWait(pacote) # Envia o pacote e espera a confirmação do servidor
 
-            if confirmacao is None:
+            if confirmacao is None: # Se não houver resposta do servidor, encerra a comunicação
                 client.closeClient()
             else:
                 numPacoteCorreto = client.checkTypeMsg(confirmacao)
-                if numPacoteCorreto is None:
-                    if h4 == 2:
+                if numPacoteCorreto is None: # Se o número do pacote estiver errado
+                    if h4 == 2: # Se o número do pacote for 2, pula para o 4
                         h4 += 2
                     else:
                         h4 += 1
                     c += 1
-                else:
+                else: # Se o número do pacote estiver correto, envia o próximo
                     h4 = numPacoteCorreto
-                    c = numPacoteCorreto - 1
+                    c = numPacoteCorreto - 1 
 
         client.writeLog()
         client.closeClient()
