@@ -56,6 +56,11 @@ class Client:
         print("-------------------------")
         self.clientCom.disable()
         exit()
+    
+    def sendSacrifice(self):
+        self.clientCom.sendData(b'\x00')
+        time.sleep(0.1)
+        print("Enviando byte de sacrifício")
         
     # Cria os payloads
     def createPayloads(self):
@@ -157,6 +162,9 @@ def main():
     try:
         client = Client(file, "COM3")
         client.startClient()
+
+        # Envia byte de sacrifício
+        client.sendSacrifice()
 
         # Handshake
         print("Enviando Handshake\n")
