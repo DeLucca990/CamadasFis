@@ -51,7 +51,9 @@ class Server:
 
     # Recebe o handshake do client
     def receiveHandshake(self, n):
+        print('entrei pra receber')
         pack, lenpack = self.serverCom.getData(n)
+        time.sleep(.1)
         self.createLog(pack, 'recebimento') # Cria o log
         pack = list(pack)
         pack = list(map(int, pack)) # Transforma os dados em inteiros
@@ -60,6 +62,9 @@ class Server:
         for i in pack:
             responseHandshake += (i).to_bytes(1, byteorder='big')    
         return responseHandshake, lenpack
+    
+    
+
     
     def splitHead(self, data):
         head = data[:10]
@@ -126,6 +131,14 @@ class Server:
     def writeLog(self):
         with open(f'Projeto4/Logs/logServer.txt', 'w') as file:
             file.write(self.logs)
+
+    def receiveSacrifice(self):
+        #Byte de sacrifício
+        print("Esperando 1 byte de sacrifício")
+        rxBuffer, nRx = self.receiveData(1)
+        self.serverCom.rx.clearBuffer()
+        time.sleep(.1)
+        
     
 serialName = "COM3"
 
@@ -133,6 +146,8 @@ def main():
     try:
         server = Server('COM3')
         server.startServer()
+
+        server.receiveSacrifice()
 
         # HandShake
         print("Esperando o Handshake do Client...\n")
