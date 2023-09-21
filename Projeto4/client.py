@@ -128,7 +128,6 @@ class Client:
         self.h7 = b'\x00'
         self.buildHead()
         datagram = self.head + payload + self.eop
-        print(datagram)
         return self.SendWait(datagram)
     
     # Checa o tipo de mensagem na confirmação enviada pelo servidor
@@ -153,7 +152,7 @@ class Client:
         self.logs += f"{tempo} / {tipo} / {tipoMsg} / {tamDatagram} / {numPacoteEnviado} / {totalPacotes}\n"
         
     def writeLog(self):
-        with open(f'Projeto4/Logs/logClient.txt', 'w') as file:
+        with open(f'Projeto4/Logs/logClient3.txt', 'w') as file:
             file.write(self.logs)
 
 serialName = "COM3"
