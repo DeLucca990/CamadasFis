@@ -32,7 +32,7 @@ class Client:
         self.serialName = serialName
         self.head = None
         self.file = file
-        self.eop = b'\xAA \xBB \xCC \xDD'
+        self.eop = b'\xAA\xBB\xCC\xDD'
         self.payloads = 0
         self.h0 = 0 # Tipo da Mensagem
         self.h1 = b'\x00' # Se tipo for 1: número do servidor. Qualquer outro tipo: livre 
@@ -106,6 +106,7 @@ class Client:
         timeMax = time.time()
         while True: 
             self.clientCom.sendData(pacote)
+            time.sleep(.1)
             self.createLog(pacote, 'envio')
             time.sleep(.5)
             confirmacao, lenConfimacao = self.clientCom.getData(15)
@@ -113,8 +114,8 @@ class Client:
             if timeF - timeMax > 20:
                 print("Servidor não respondeu. Cancelando comunicação.")
                 break
-            #elif type(confirmacao) == str:
-            #    print(confirmacao)
+            elif type(confirmacao) == str:
+                print(confirmacao)
             else:
                 return confirmacao
 
@@ -127,6 +128,7 @@ class Client:
         self.h7 = b'\x00'
         self.buildHead()
         datagram = self.head + payload + self.eop
+        print(datagram)
         return self.SendWait(datagram)
     
     # Checa o tipo de mensagem na confirmação enviada pelo servidor
