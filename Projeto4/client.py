@@ -135,11 +135,11 @@ class Client:
         if confirmacao[0] == 4: # 4 indica sucesso (confirmacao[0] = h0)
             self.createLog(confirmacao, 'recebimento')
             print(f"Número do pacote: {confirmacao[7]}")
-            print("Tudo certo! O servidor recebeu o pacote corretamente.")
+            print("\033[32mTudo certo! O servidor recebeu o pacote corretamente.\033[0m")
         else:
             self.createLog(confirmacao, 'recebimento')
             numPacoteCorreto = confirmacao[7]
-            print(f"Algo deu errado no envio. Precisamos reenviar o pacote {numPacoteCorreto}")
+            print(f"\033[33mAlgo deu errado no envio. Precisamos reenviar o pacote {numPacoteCorreto}\033[0m")
             return numPacoteCorreto
     
     # Escreve os logs
