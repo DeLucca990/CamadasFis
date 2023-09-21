@@ -61,6 +61,7 @@ class Server:
         responseHandshake = b''
         for i in pack:
             responseHandshake += (i).to_bytes(1, byteorder='big')    
+    
         return responseHandshake, lenpack
     
     
@@ -93,14 +94,14 @@ class Server:
             for i in confirmacao: # Transforma cada elemento da lista em bytes
                 i = (i).to_bytes(1, byteorder="big")
                 responseCorrectMsg += i
-            self.serverCom.sendData(responseCorrectMsg + b'\x00' + b'\xAA \xBB \xCC \xDD')
+            self.serverCom.sendData(responseCorrectMsg + b'\x00' + b'\xAA\xBB\xCC\xDD')
             #self.createLog(responseCorrectMsg + b'\x00' + b'\xAA \xBB \xCC \xDD', 'envio')
             time.sleep(0.5)
             return h4, h3
 
         # Checando se o EOP está no local correto
         eop = pacote[len(pacote)-4:len(pacote)+1]
-        if eop != b'\xAA \xBB \xCC \xDD':
+        if eop != b'\xAA\xBB\xCC\xDD':
             print(f"O eop está no local errado! Por favor reenvie o pacote {numPacote}")
             return h4, h3
         
@@ -114,8 +115,8 @@ class Server:
             for i in confirmacao:
                 i = (i).to_bytes(1, byteorder="big")
                 responseCorrectMsg += i
-            self.serverCom.sendData(responseCorrectMsg + b'\x00' + b'\xAA \xBB \xCC \xDD')
-            self.createLog(responseCorrectMsg + b'\x00' + b'\xAA \xBB \xCC \xDD', 'envio')
+            self.serverCom.sendData(responseCorrectMsg + b'\x00' + b'\xAA\xBB\xCC\xDD')
+            self.createLog(responseCorrectMsg + b'\x00' + b'\xAA\xBB\xCC\xDD', 'envio')
             time.sleep(0.5)
             return h4, h3
 
@@ -151,6 +152,7 @@ def main():
 
         # HandShake
         print("Esperando o Handshake do Client...\n")
+        
         pack, lenpack = server.receiveHandshake(15)
         print("Handshake recebido com sucesso, enviando resposta")
         server.sendData(pack)
