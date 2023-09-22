@@ -65,9 +65,6 @@ class Server:
     
         return responseHandshake, lenpack
     
-    
-
-    
     def splitHead(self, data):
         head = data[:10]
         h0 = head[0] # Tipo da Mensagem
@@ -132,15 +129,10 @@ class Server:
 
         if self.cancel_reason is not None:
             self.logs += f"{tempo} / {tipo} / 5 / {tamMsg} / {numPacoteEnviado} / {totalPacotes} / {self.cancel_reason} \n"
-
-
-
-        
+ 
     def writeLog(self):
         with open(f'Projeto4/Logs/logServer3.txt', 'w') as file:
             file.write(self.logs)
-
-
 
     def receiveSacrifice(self):
         #Byte de sacrifício
@@ -199,7 +191,6 @@ def main():
         print(erro)
         server.closeServer()
         
-
     #so roda o main quando for executado do terminal ... se for chamado dentro de outro modulo nao roda
 if __name__ == "__main__":
     main()
