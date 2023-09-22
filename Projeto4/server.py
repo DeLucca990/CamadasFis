@@ -30,6 +30,7 @@ class Server:
     def __init__(self, serialName):
         self.serialName = serialName
         self.logs = ''
+        self.cancel_reason = None
 
     def startServer(self):
         self.serverCom = enlace(self.serialName)
@@ -54,7 +55,7 @@ class Server:
         print('entrei pra receber')
         pack, lenpack = self.serverCom.getData(n)
         time.sleep(.1)
-        self.createLog(pack, 'recebimento') # Cria o log
+        self.createLog(pack, 'receb') # Cria o log
         pack = list(pack)
         pack = list(map(int, pack)) # Transforma os dados em inteiros
         pack[0] = 2 # Muda o tipo da mensagem para 2 (handshake)
@@ -82,11 +83,11 @@ class Server:
         return h0, h1, h2, h3, h4, h5, h6, h7, h8, h9
     
     def checkMsgIntegrity(self, pacote, numPacote):
-        self.createLog(pacote, 'recebimento')
+        self.createLog(pacote, 'receb')
         h0, h1, h2, h3, h4, h5, h6, h7, h8, h9 = self.splitHead(pacote)
         # Checando se o número do pacote enviado está correto
         if h4 != numPacote:
-            print(f"O número do pacote está errado! Por favor reenvie o pacote {numPacote}")
+            print(f"\033[33mO número do pacote está errado! Por favor reenvie o pacote {numPacote}\033[0m")
             h0 = 6 # 6 indica erro
             h7 = numPacote
             confirmacao = [h0, h1, h2, h3, h4, h5, h6, h7, h8, h9]
@@ -102,12 +103,12 @@ class Server:
         # Checando se o EOP está no local correto
         eop = pacote[len(pacote)-4:len(pacote)+1]
         if eop != b'\xAA\xBB\xCC\xDD':
-            print(f"O eop está no local errado! Por favor reenvie o pacote {numPacote}")
+            print(f"\033[33mO eop está no local errado! Por favor reenvie o pacote {numPacote}\033[0m")
             return h4, h3
-        
+            
         # Se tudo estiver certo, deu bom
         else:
-            print("Está tudo certo com a mensagem! Vamos enviar a confirmação.")
+            print("\033[32mEstá tudo certo com a mensagem! Vamos enviar a confirmação.\033[0m")
             h0 = 4 # 4 indica sucesso
             h7 = numPacote
             confirmacao = [h0, h1, h2, h3, h4, h5, h6, h7, h8, h9]
@@ -128,10 +129,18 @@ class Server:
         numPacoteEnviado = data[4]
         totalPacotes = data[3]
         self.logs += f"{tempo} / {tipo} / {tipoMsg} / {tamMsg} / {numPacoteEnviado} / {totalPacotes}\n"
+
+        if self.cancel_reason is not None:
+            self.logs += f"{tempo} / {tipo} / 5 / {tamMsg} / {numPacoteEnviado} / {totalPacotes} / {self.cancel_reason} \n"
+
+
+
         
     def writeLog(self):
-        with open(f'Projeto4/Logs/logServer.txt', 'w') as file:
+        with open(f'Projeto4/Logs/logServer3.txt', 'w') as file:
             file.write(self.logs)
+
+
 
     def receiveSacrifice(self):
         #Byte de sacrifício
@@ -140,7 +149,6 @@ class Server:
         self.serverCom.rx.clearBuffer()
         time.sleep(.1)
         
-    
 serialName = "COM3"
 
 def main():
@@ -154,7 +162,7 @@ def main():
         print("Esperando o Handshake do Client...\n")
         
         pack, lenpack = server.receiveHandshake(15)
-        print("Handshake recebido com sucesso, enviando resposta")
+        print("\033[32mHandshake recebido com sucesso, enviando resposta\033[0m")
         server.sendData(pack)
         time.sleep(0.5)
 
@@ -171,13 +179,13 @@ def main():
             if numPackReceived == numPack:
                 data += payloadEOP[0:lenpayloadEOP - 4]
                 numPack += 1 # Caso o pacote esteja correto, passamos para o próximo
-            if numPackReceived == numPackTotal + 1: # Se todos os pacotes foram recebidos, saímos do loop
+            if numPackReceived == numPackTotal -1: # Se todos os pacotes foram recebidos, saímos do loop
                 data += payloadEOP[0:lenpayloadEOP - 4]
                 break
         
         # Escrevendo o arquivo
         print("Escrevendo o arquivo")
-        path = "Projeto4/Images/imgRx.png"
+        path = "Projeto4/Images/imgRx.jpg"
         with open(path, 'wb') as file:
             file.write(data)
         file.close()
