@@ -30,6 +30,7 @@ com1 = enlace('COM3')
 class Client:
     def __init__(self, file, serialName):
         self.serialName = serialName
+        self.cancel_reason = None
         self.head = None
         self.file = file
         self.eop = b'\xAA\xBB\xCC\xDD'
@@ -109,15 +110,21 @@ class Client:
             time.sleep(.1)
             self.createLog(pacote, 'envio')
             time.sleep(.5)
-            confirmacao, lenConfimacao = self.clientCom.getData(15)
-            timeF = time.time()
-            if timeF - timeMax > 20:
-                print("Servidor não respondeu. Cancelando comunicação.")
-                break
-            elif type(confirmacao) == str:
-                print(confirmacao)
+            len_conf = self.clientCom.rx.getBufferLen()
+            time.sleep(.5)
+            if len_conf != 0:
+                confirmacao, lenConfimacao = self.clientCom.getData(15)
+                if type(confirmacao) == str:
+                    print(confirmacao)
+                else:
+                    return confirmacao
             else:
-                return confirmacao
+                timeF = time.time()
+                if timeF - timeMax > 3:
+                    self.cancel_reason = "Timeout"
+                    print("\033[31mServidor não respondeu. Cancelando comunicação.\033[0m")
+                    self.createLog(pacote, 'envio')
+                    break
 
     # Handshake
     def handshake(self):
@@ -133,11 +140,11 @@ class Client:
     # Checa o tipo de mensagem na confirmação enviada pelo servidor
     def checkTypeMsg(self, confirmacao):
         if confirmacao[0] == 4: # 4 indica sucesso (confirmacao[0] = h0)
-            self.createLog(confirmacao, 'recebimento')
+            self.createLog(confirmacao, 'receb')
             print(f"Número do pacote: {confirmacao[7]}")
             print("\033[32mTudo certo! O servidor recebeu o pacote corretamente.\033[0m")
         else:
-            self.createLog(confirmacao, 'recebimento')
+            self.createLog(confirmacao, 'receb')
             numPacoteCorreto = confirmacao[7]
             print(f"\033[33mAlgo deu errado no envio. Precisamos reenviar o pacote {numPacoteCorreto}\033[0m")
             return numPacoteCorreto
@@ -150,6 +157,9 @@ class Client:
         numPacoteEnviado = data[4]
         totalPacotes = data[3]
         self.logs += f"{tempo} / {tipo} / {tipoMsg} / {tamDatagram} / {numPacoteEnviado} / {totalPacotes}\n"
+
+        if self.cancel_reason is not None:
+            self.logs += f"{tempo} / {tipo} / 5 / {tamDatagram} / {numPacoteEnviado} / {totalPacotes} / {self.cancel_reason}\n"
         
     def writeLog(self):
         with open(f'Projeto4/Logs/logClient3.txt', 'w') as file:
@@ -192,12 +202,13 @@ def main():
             confirmacao = client.SendWait(pacote) # Envia o pacote e espera a confirmação do servidor
 
             if confirmacao is None: # Se não houver resposta do servidor, encerra a comunicação
+                client.writeLog()
                 client.closeClient()
             else:
                 numPacoteCorreto = client.checkTypeMsg(confirmacao)
                 if numPacoteCorreto is None: # Se o número do pacote estiver errado
-                    if h4 == 2: # Se o número do pacote for 2, pula para o 4
-                        h4 += 2
+                    if h4 == 7: # Se o número do pacote for 7, pula para o 9 (FORÇA O ERRO)
+                        h4 += 1
                     else:
                         h4 += 1
                     c += 1
