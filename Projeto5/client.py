@@ -130,7 +130,7 @@ class Client:
                     return confirmacao
             else:
                 timeF = time.time()
-                if timeF - timeMax > 5:
+                if timeF - timeMax > 20:
                     self.cancel_reason = "Timeout"
                     print("\033[31mServidor não respondeu. Cancelando comunicação.\033[0m")
                     self.createLog(pacote, 'envio')
