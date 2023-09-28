@@ -82,6 +82,7 @@ class Server:
         return h0, h1, h2, h3, h4, h5, h6, h7, h8, h9
     
     def checkMsgIntegrity(self, pacote, numPacote):
+        
         self.createLog(pacote, 'receb')
         h0, h1, h2, h3, h4, h5, h6, h7, h8, h9 = self.splitHead(pacote)
         # Checando se o número do pacote enviado está correto
@@ -95,10 +96,10 @@ class Server:
             for i in confirmacao: # Transforma cada elemento da lista em bytes
                 i = (i).to_bytes(1, byteorder="big")
                 responseCorrectMsg += i
+            
             self.serverCom.sendData(responseCorrectMsg + b'\x00' + b'\xAA\xBB\xCC\xDD')
             #self.createLog(responseCorrectMsg + b'\x00' + b'\xAA \xBB \xCC \xDD', 'envio')
-            time.sleep(2)
-
+            
             if self.counter_repeater >= 16:
                 self.cancel_reason = 'Timeout'
                 self.createLog(pacote, 'receb')
@@ -152,7 +153,7 @@ class Server:
             self.logs += f"{tempo} / {tipo} / 5 / {tamMsg} / {numPacoteEnviado} / {totalPacotes} / {self.cancel_reason} \n"
  
     def writeLog(self):
-        with open(f'Projeto5/Logs/logServer1.txt', 'w') as file:
+        with open(f'Projeto5/Logs/logServer2.txt', 'w') as file:
             file.write(self.logs)
 
     def receiveSacrifice(self):
