@@ -87,7 +87,6 @@ class Client:
         # Mensagem do tipo Handshake
         if n == 1:
             self.h5 = b'\x00'
-            #self.h3 = self.numPack()
         # Mensagem do tipo dados
         elif n == 3:
             self.h5 = len(self.payloads[int.from_bytes(self.h4,"big")-1]) # -1 pois o index começa em 0
@@ -172,11 +171,11 @@ class Client:
             self.logs += f"{tempo} / {tipo} / 5 / {tamDatagram} / {numPacoteEnviado} / {totalPacotes} / {self.cancel_reason}\n"
         
     def writeLog(self):
-        with open(f'Projeto4/Logs/logClient3.txt', 'w') as file:
+        with open(f'Projeto5/Logs/logClient1.txt', 'w') as file:
             file.write(self.logs)
 
 serialName = "COM3"
-path = 'Projeto4/Images/imgTx.jpg'
+path = 'Projeto5/Images/imgTx.jpg'
 file = open(path, "rb").read()
 
 def main():
@@ -192,7 +191,7 @@ def main():
         if client.handshake() is None:
             client.closeClient()
         else:
-            print("Handshake realizado com sucesso")
+            print("\033[32mHandshake enviado com sucesso!\033[0m")
         
         # Envia os pacotes
         print("Iniciando envio de pacotes")
@@ -205,9 +204,10 @@ def main():
         c = 0
         while h4 < int.from_bytes(client.h3, "big"):
             print(f"Enviando informações referentes ao pacote {h4}")
+            time.sleep(3)
             client.numMsg(h4) # Define o número do pacote
             client.createCRC() # Cria o protocolo CRC
-            print(f"CRC: {client.h8} {client.h9}")
+            print(f"\033[35mCRC: {client.h8} {client.h9}\033[0m")
             client.TypeMsg(3) # 3 = dados
             client.buildHead()
             pacote = client.buildDatagram()
