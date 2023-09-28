@@ -162,7 +162,7 @@ class Client:
             self.logs += f"{tempo} / {tipo} / 5 / {tamDatagram} / {numPacoteEnviado} / {totalPacotes} / {self.cancel_reason}\n"
         
     def writeLog(self):
-        with open(f'Projeto4/Logs/logClient3.txt', 'w') as file:
+        with open(f'Projeto4/Logs/logClient1.txt', 'w') as file:
             file.write(self.logs)
 
 serialName = "COM3"
