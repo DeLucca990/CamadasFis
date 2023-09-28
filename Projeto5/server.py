@@ -97,9 +97,9 @@ class Server:
                 responseCorrectMsg += i
             self.serverCom.sendData(responseCorrectMsg + b'\x00' + b'\xAA\xBB\xCC\xDD')
             #self.createLog(responseCorrectMsg + b'\x00' + b'\xAA \xBB \xCC \xDD', 'envio')
-            time.sleep(0.5)
+            time.sleep(2)
 
-            if self.counter_repeater >= 17:
+            if self.counter_repeater >= 16:
                 self.cancel_reason = 'Timeout'
                 self.createLog(pacote, 'receb')
                 self.writeLog()
@@ -152,7 +152,7 @@ class Server:
             self.logs += f"{tempo} / {tipo} / 5 / {tamMsg} / {numPacoteEnviado} / {totalPacotes} / {self.cancel_reason} \n"
  
     def writeLog(self):
-        with open(f'Projeto4/Logs/logServer3.txt', 'w') as file:
+        with open(f'Projeto5/Logs/logServer1.txt', 'w') as file:
             file.write(self.logs)
 
     def receiveSacrifice(self):
@@ -198,7 +198,7 @@ def main():
         
         # Escrevendo o arquivo
         print("Escrevendo o arquivo")
-        path = "Projeto4/Images/imgRx.jpg"
+        path = "Projeto5/Images/imgRx.jpg"
         with open(path, 'wb') as file:
             file.write(data)
         file.close()

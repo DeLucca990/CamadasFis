@@ -97,7 +97,7 @@ class Server:
             #self.createLog(responseCorrectMsg + b'\x00' + b'\xAA \xBB \xCC \xDD', 'envio')
             time.sleep(0.5)
 
-            if self.counter_repeater >= 17:
+            if self.counter_repeater >= 16:
                 self.cancel_reason = 'Timeout'
                 self.createLog(pacote, 'receb')
                 self.writeLog()
@@ -141,7 +141,7 @@ class Server:
             self.logs += f"{tempo} / {tipo} / 5 / {tamMsg} / {numPacoteEnviado} / {totalPacotes} / {self.cancel_reason} \n"
  
     def writeLog(self):
-        with open(f'Projeto4/Logs/logServer3.txt', 'w') as file:
+        with open(f'Projeto4/Logs/logServer1.txt', 'w') as file:
             file.write(self.logs)
 
     def receiveSacrifice(self):
