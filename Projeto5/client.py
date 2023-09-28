@@ -171,7 +171,7 @@ class Client:
             self.logs += f"{tempo} / {tipo} / 5 / {tamDatagram} / {numPacoteEnviado} / {totalPacotes} / {self.cancel_reason}\n"
         
     def writeLog(self):
-        with open(f'Projeto5/Logs/logClient1.txt', 'w') as file:
+        with open(f'Projeto5/Logs/logClient2.txt', 'w') as file:
             file.write(self.logs)
 
 serialName = "COM3"
@@ -204,7 +204,7 @@ def main():
         c = 0
         while h4 < int.from_bytes(client.h3, "big"):
             print(f"Enviando informações referentes ao pacote {h4}")
-            time.sleep(3)
+            time.sleep(0.1)
             client.numMsg(h4) # Define o número do pacote
             client.createCRC() # Cria o protocolo CRC
             print(f"\033[35mCRC: {client.h8} {client.h9}\033[0m")
