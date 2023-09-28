@@ -97,12 +97,12 @@ class Server:
             #self.createLog(responseCorrectMsg + b'\x00' + b'\xAA \xBB \xCC \xDD', 'envio')
             time.sleep(0.5)
 
-            if self.counter_repeater == 3:
+            if self.counter_repeater >= 17:
                 self.cancel_reason = 'Timeout'
                 self.createLog(pacote, 'receb')
                 self.writeLog()
                 print("\033[31mTimeout, encerrando comunicação.\033[0m")
-                time.sleep(0.1)
+                time.sleep(0.3)
                 self.closeServer()
             return h4, h3
 
@@ -115,6 +115,7 @@ class Server:
         # Se tudo estiver certo, deu bom
         else:
             print("\033[32mEstá tudo certo com a mensagem! Vamos enviar a confirmação.\033[0m")
+            self.counter_repeater = 0
             h0 = 4 # 4 indica sucesso
             h7 = numPacote
             confirmacao = [h0, h1, h2, h3, h4, h5, h6, h7, h8, h9]
