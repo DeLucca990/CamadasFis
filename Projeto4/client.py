@@ -48,10 +48,12 @@ class Client:
         self.logs = ''
 
     def startClient(self):
+        # Inicializa a comunicação
         self.clientCom = enlace(self.serialName)
         self.clientCom.enable()
 
     def closeClient(self):
+        # Encerra a comunicação
         print("-------------------------")
         print("Comunicação encerrada")
         print("-------------------------")
@@ -59,6 +61,7 @@ class Client:
         exit()
     
     def sendSacrifice(self):
+        # envia o byte de sacrifício
         self.clientCom.sendData(b'\x00')
         time.sleep(0.1)
         print("Enviando byte de sacrifício")
@@ -67,13 +70,15 @@ class Client:
     def createPayloads(self):
         size = 114
         self.payloads = []
+        # Divide o arquivo em pacotes de 114 bytes
         for i in range(0, len(self.file), size):
             self.payloads.append(self.file[i:i + size]) # Divide os pacotes em tamanhos iguais a 114 bytes
         return self.payloads
 
-    # Define o tipo da mensagem
+    # Define o tipo da mensagem - especificado em h0
     def TypeMsg(self, n):
         self.h0 = (n).to_bytes(1, byteorder="big")
+        # confere qual o tipo da mensagem   
         # Mensagem do tipo Handshake
         if n == 1:
             self.h5 = b'\x00'
@@ -90,7 +95,9 @@ class Client:
     
     # Define o número total de pacotes
     def numPack(self):
+        # Define o número total de pacotes de acordo com o tamanho do arquivo
         lenPayload = len(self.file)
+        # salva em h3 o número total de pacotes que serao enviados
         h3 = math.ceil(lenPayload/114)
         self.h3 = (h3).to_bytes(1, byteorder="big")
 
@@ -105,15 +112,22 @@ class Client:
     # Checa o tempo máximo para a resposta do servidor
     def SendWait(self, pacote):
         timeMax = time.time()
+    
         while True: 
+            # Envia o pacote
             self.clientCom.sendData(pacote)
             time.sleep(.1)
+            # cria o log
             self.createLog(pacote, 'envio')
             time.sleep(.5)
+            # Aguarda a resposta do servidor
             len_conf = self.clientCom.rx.getBufferLen()
             time.sleep(.5)
+            # verifica se há resposta do servidor
             if len_conf != 0:
+                # Recebe a confirmação do servidor e o tamanho da confirmação
                 confirmacao, lenConfimacao = self.clientCom.getData(15)
+                time.sleep(.1)
                 if type(confirmacao) == str:
                     print(confirmacao)
                 else:
