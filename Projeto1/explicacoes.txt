@@ -18,3 +18,7 @@ Ela aguarda até que o buffer da camada de recepção contenha pelo menos o núm
 
 *sendBuffer(): Inicia a transmissão dos dados presentes no buffer da camada de transmissão (TX). Usado para iniciar a transmissão dos dados 
 que estão armazenados no buffer da camada de transmissão. Isso permite enviar os dados através do meio de comunicação físico.
+
+*Thread: Uma thread é uma unidade básica de execução em um programa de computador. Ela é uma sequência de instruções que pode ser executada 
+concorrentemente com outras threads dentro do mesmo processo. Em sistemas operacionais modernos, os processos podem conter uma ou mais threads,
+e essas threads compartilham recursos do processo, como memória e arquivos, facilitando a execução paralela de tarefas.
