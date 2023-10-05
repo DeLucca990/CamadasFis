@@ -4,6 +4,35 @@
 * Maria Vitória
 
 ## Projetos
+
+### Conceitos iniciais 
+
+- __interfacefisica.py__
+    
+    É responsável por lidar com a comunicação serial em uma camada mais física, de certa maneira. Ela realiza a abertura, fechamento, leitura e escrita diretamente na porta serial.
+
+- __enlace.py__
+
+    É uma camada responsável por intermediar a interface física e a aplicação. Dá inicio e fim na thread. Possui uma classe RX e outra TX para facilitar e organizar a comunicação.
+
+- __enlaceRx.py__
+
+    Responsável por receber os dados, possui uma variável threadMutex (um booleano) que indica quando a aplicação está de fato enviando algum dado para o RX. 
+
+    De maneira mais prática, como é possível observar na função _thread_, enquanto threadMutex = True, ele ficará atualizando o rxBuffer, até que seja necessário receber um dado. Quando isso ocorre (a aplicação _getData_), há uma pausa no thread para que seja reatualizado o valor do buffer. (exemplo: getData de 10bytes, dentro de um pacote de 20bytes. Será atualizado o buffer para conter apenas os 10bytes que não foram coletados).
+
+- __enlaceTx.py__
+
+    Responsável por transmitir os dados para os periféricos. A threadMutex fica sempre False, e quando ela se tornar True, significa o momento que ele enviará os dados (na prática, escreverá na interface física o que está no bufferTx). 
+    
+    Outra função interessante de ser observada é o getIsBusy, que indica se o Tx pode ou nao enviar o próximo dado. Ele só poderá enviar se não estiver ocupado, se o threadMutex for Falso.
+
+    O getStatus indica a quantidade de bytes enviada na transmissão
+
+- __aplicacao.py__
+
+    Responsável por estabelecer a comunicação e enviar e receber dados da interface física.
+
 ### Projeto Loopback [Projeto 1]
 
 Esse software é capaz de :
