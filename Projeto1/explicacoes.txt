@@ -30,9 +30,6 @@ OverHead: len (datagrama) /len (payload)
 throughput: taxa de envio e download
 baudrate: quantos bits sao transmitidos em 1 segundo
 
-udp: simples (arremesso do bebê)
-tcp: handshake e via de mão dupla
-
 CRC: escolher um numero binario para o polinomio do CRC;
 ex: 10011 --> ×^4+×+1 ;
 como o polinomio acima é de 4 grau, pegue seus dados e adicione 4 zeros no final;

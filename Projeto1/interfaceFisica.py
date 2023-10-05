@@ -22,7 +22,7 @@ class fisica(object):
         self.baudrate    = 115200
         #self.baudrate    = 9600
         self.bytesize    = serial.EIGHTBITS
-        self.parity      = serial.PARITY_NONE
+        self.parity      = serial.PARITY_NONE 
         self.stop        = serial.STOPBITS_ONE
         self.timeout     = 0.1
         self.rxRemain    = b""
